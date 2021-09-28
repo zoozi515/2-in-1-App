@@ -1,7 +1,9 @@
 package com.example.a2in1app
 
+import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
@@ -24,6 +26,9 @@ class GuessThePhrase : AppCompatActivity() {
     private lateinit var guess_button: Button
     private lateinit var phrase_textView: TextView
     private lateinit var letter_textView: TextView
+    private lateinit var highScore_textView: TextView
+
+    private lateinit var sharedPreferences: SharedPreferences
 
     private var goal_phrase = "welcome to coding dojo"
     private var guessed_letter = ""
@@ -31,12 +36,18 @@ class GuessThePhrase : AppCompatActivity() {
 
     private var selection = 1 //for whole phrase
     private var count = 0
+    private var highScore = 0
+    private var currentScore = 0
 
     private val myAnswerDictionary = mutableMapOf<Int, Char>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.guess_the_phrase)
+
+        sharedPreferences = this.getSharedPreferences(
+            getString(R.string.preference_file_key), Context.MODE_PRIVATE)
+        highScore = sharedPreferences.getInt("myHighScore", 0)
 
         var i = 0
         while(i < goal_phrase.length) {
@@ -56,6 +67,8 @@ class GuessThePhrase : AppCompatActivity() {
             guessed_phrase = savedInstanceState.getString("guessed_phrase").toString()
             selection = savedInstanceState.getInt("selection")
             count = savedInstanceState.getInt("count")
+            highScore = savedInstanceState.getInt("highScore")
+            currentScore = savedInstanceState.getInt("currentScore")
             phrase_message = savedInstanceState.getStringArrayList("phrase_message") as ArrayList<String>
         } else {
             phrase_message = ArrayList()
@@ -70,6 +83,8 @@ class GuessThePhrase : AppCompatActivity() {
         phrase_editText = findViewById(R.id.phrase_editText)
         phrase_textView = findViewById(R.id.phrase_textView)
         letter_textView = findViewById(R.id.letter_textView)
+        highScore_textView = findViewById(R.id.highScore_textView)
+        highScore_textView.text = "Your High Score: $highScore"
 
         guess_button = findViewById<Button>(R.id.guss_button)
         guess_button.setOnClickListener { Guss_the_Phrase() }
@@ -77,12 +92,13 @@ class GuessThePhrase : AppCompatActivity() {
         update()
     }
 
-    fun Guss_the_Phrase(){
+    private fun Guss_the_Phrase(){
         val input = phrase_editText.text.toString()
         if(selection == 1){
             if(input == goal_phrase){
                 val msg = "Great Job, You Win!!"
                 phrase_message.add(msg)
+                setHigherScore()
                 playAgainAlert(msg+",\nPlay again?")
                 endOfTheGAme(false)
                 update()
@@ -107,7 +123,7 @@ class GuessThePhrase : AppCompatActivity() {
         main_recycleView.adapter?.notifyDataSetChanged()
     }
 
-    fun update(){
+    private fun update(){
         phrase_textView.text = "Phrase:  " + guessed_phrase.toUpperCase()
         letter_textView.text = "Guessed Letters:  " + guessed_letter
         if(selection == 1){
@@ -117,7 +133,7 @@ class GuessThePhrase : AppCompatActivity() {
         }
     }
 
-    fun checkLetters(guessedLetter: Char){
+    private fun checkLetters(guessedLetter: Char){
         var flag = true
         for(i in guessed_letter.indices){
             if ( guessed_letter[i] == guessedLetter) {
@@ -146,6 +162,7 @@ class GuessThePhrase : AppCompatActivity() {
             if(guessed_phrase==goal_phrase){
                 val msg = "Great Job, You Win!!"
                 phrase_message.add(msg)
+                setHigherScore()
                 playAgainAlert(msg+",\nPlay again?")
                 endOfTheGAme(false)
                 update()
@@ -166,6 +183,7 @@ class GuessThePhrase : AppCompatActivity() {
             if (guessesLeft == 0){
                 val msg = "You loose"
                 phrase_message.add(msg)
+                setHigherScore()
                 playAgainAlert(msg+",\nPlay again?")
                 endOfTheGAme(false)
             }
@@ -175,6 +193,19 @@ class GuessThePhrase : AppCompatActivity() {
             }
             update()
             main_recycleView.scrollToPosition(phrase_message.size - 1)
+        }
+    }
+
+    private fun setHigherScore(){
+        currentScore = 10 - count
+
+        if(currentScore > highScore){
+            highScore = currentScore
+            highScore_textView.text = "Your High Score: $highScore"
+            with(sharedPreferences.edit()) {
+                putInt("myHighScore",highScore)
+                apply()
+            }
         }
     }
 
@@ -222,6 +253,8 @@ class GuessThePhrase : AppCompatActivity() {
         outState.putString("guessed_phrase",guessed_phrase)
         outState.putInt("selection", selection)
         outState.putInt("count", count)
+        outState.putInt("highScore", highScore)
+        outState.putInt("currentScore", currentScore)
         outState.putStringArrayList("phrase_message", phrase_message)
     }
 
